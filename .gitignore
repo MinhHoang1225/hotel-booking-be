@@ -1,0 +1,131 @@
+# =========================
+# Dependencies
+# =========================
+node_modules/
+
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Build / Production
+# =========================
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Cache
+# =========================
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# =========================
+# Coverage
+# =========================
+coverage/
+.nyc_output/
+
+# =========================
+# Temporary Files
+# =========================
+tmp/
+temp/
+*.tmp
+*.temp
+
+# =========================
+# VSCode
+# =========================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# =========================
+# JetBrains IDE
+# =========================
+.idea/
+*.iml
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Runtime Files
+# =========================
+*.pid
+*.seed
+*.pid.lock
+
+# =========================
+# Uploads (nếu lưu file upload local)
+# =========================
+uploads/
+public/uploads/
+
+# =========================
+# Database Files
+# =========================
+*.sqlite
+*.sqlite3
+*.db
+
+# =========================
+# SSL Certificates
+# =========================
+*.pem
+*.key
+*.crt
+*.pfx
+
+# =========================
+# Testing
+# =========================
+jest-report/
+playwright-report/
+test-results/
+
+# =========================
+# Docker
+# =========================
+.docker/
+
+# =========================
+# Package Managers
+# =========================
+.pnp
+.pnp.js
+
+# =========================
+# TypeScript
+# =========================
+*.tsbuildinfo
+
+# =========================
+# Misc
+# =========================
+.vercel
+.netlify
