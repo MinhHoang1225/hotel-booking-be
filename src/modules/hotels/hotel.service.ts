@@ -191,6 +191,11 @@ export const hotelService = {
         owner: {
           select: { id: true, fullName: true, email: true, avatarUrl: true },
         },
+        // Lấy kèm danh sách các phòng có sẵn của khách sạn
+        rooms: {
+          where: { status: "AVAILABLE" },
+          orderBy: { price: "asc" },
+        },
       },
     });
 
@@ -198,11 +203,8 @@ export const hotelService = {
       throw new AppError(404, "Không tìm thấy khách sạn");
     }
 
-    const rooms = await prisma.room.findMany({
-      where: { hotelId: id, status: "AVAILABLE" },
-      select: { price: true },
-    });
-    const prices = rooms.map((r) => Number(r.price));
+    // Tính giá phòng thấp nhất từ danh sách phòng đã lấy
+    const prices = hotel.rooms.map((r) => Number(r.price));
     const min_price = prices.length > 0 ? Math.min(...prices) : 0;
 
     const reviews = await prisma.review.aggregate({
@@ -352,5 +354,60 @@ export const hotelService = {
 
   async uploadHotelImages(user: any, id: string, files: any) {
     throw new AppError(501, "Chức năng upload ảnh đang được xây dựng.");
+  },
+
+  /**
+   * Lấy ma trận so sánh các hạng phòng (Room-to-Room Matrix)
+   * Dựa trên số lượng khách và số ngày lưu trú để trả về tổng giá.
+   */
+  async getRoomMatrix(hotelId: string, query: any) {
+    const { checkIn, checkOut, guests } = query;
+
+    if (!checkIn || !checkOut || !guests) {
+      throw new AppError(
+        400,
+        "Vui lòng cung cấp ngày check-in, check-out và số khách.",
+      );
+    }
+
+    const checkInDate = new Date(checkIn as string);
+    const checkOutDate = new Date(checkOut as string);
+    const guestsCount = Number(guests);
+
+    if (checkInDate >= checkOutDate) {
+      throw new AppError(400, "Ngày trả phòng phải sau ngày nhận phòng.");
+    }
+
+    const nights = Math.ceil(
+      (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24),
+    );
+
+    const rooms = await prisma.room.findMany({
+      where: {
+        hotelId,
+        status: "AVAILABLE",
+        capacity: { gte: guestsCount },
+        bookings: {
+          none: {
+            status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] },
+            checkIn: { lt: checkOutDate },
+            checkOut: { gt: checkInDate },
+          },
+        },
+      },
+    });
+
+    const matrixData = rooms.map((r) => ({
+      id: r.id,
+      name: r.name,
+      images: r.images,
+      price: Number(r.price),
+      capacity: r.capacity,
+      amenities: r.amenities,
+      description: r.description,
+      totalPrice: Number(r.price) * nights,
+    }));
+
+    return { hotelId, nights, guests: guestsCount, rooms: matrixData };
   },
 };

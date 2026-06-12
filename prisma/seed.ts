@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Bắt đầu xoá dữ liệu cũ...");
   // Xóa theo thứ tự để không dính lỗi khoá ngoại (Foreign Key)
+  await prisma.notification.deleteMany();
   await prisma.review.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.booking.deleteMany();
@@ -119,7 +120,140 @@ async function main() {
     await prisma.hotel.create({ data: hotel });
   }
 
-  console.log("Đã tạo Dữ liệu Khách sạn & Phòng!");
+  console.log("✅ Đã tạo Dữ liệu Khách sạn & Phòng!");
+
+  // 3. Tạo người dùng mẫu để đánh giá
+  console.log("Tạo người dùng mẫu để đánh giá...");
+  const user1 = await prisma.user.create({
+    data: {
+      email: "user1@test.com",
+      fullName: "Nguyễn Văn A",
+      passwordHash,
+      role: "USER",
+      avatarUrl:
+        "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=150&auto=format&fit=crop",
+    },
+  });
+
+  const user2 = await prisma.user.create({
+    data: {
+      email: "user2@test.com",
+      fullName: "Trần Thị B",
+      passwordHash,
+      role: "USER",
+      avatarUrl:
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop",
+    },
+  });
+
+  const user3 = await prisma.user.create({
+    data: {
+      email: "user3@test.com",
+      fullName: "Lê Văn C",
+      passwordHash,
+      role: "USER",
+      avatarUrl:
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
+    },
+  });
+
+  // 4. Tạo thêm khách sạn Sapa để có dữ liệu review đa dạng
+  const sapaHotel = await prisma.hotel.create({
+    data: {
+      ownerId: owner.id,
+      name: "Sapa Horizon Hotel",
+      description: "Khách sạn view núi tại Sapa.",
+      address: "111 Fansipan, Sapa",
+      latitude: 22.3369,
+      longitude: 103.844,
+      status: "APPROVED",
+      images: [
+        "https://images.unsplash.com/photo-1534038313323-212534a207a0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      ],
+      rooms: {
+        create: [
+          {
+            name: "Mountain View Bungalow",
+            description: "Bungalow nhìn ra dãy Hoàng Liên Sơn.",
+            price: 90.0,
+            capacity: 2,
+            amenities: ["Wi-Fi", "Balcony", "Fireplace"],
+            images: [
+              "https://images.unsplash.com/photo-1584132967334-10e028bd69f6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            ],
+          },
+        ],
+      },
+    },
+  });
+
+  console.log("✅ Đã tạo người dùng và khách sạn Sapa!");
+
+  // 5. Tạo booking và review mẫu
+  console.log("Tạo booking và review mẫu...");
+  const hanoiHotel = await prisma.hotel.findFirst({
+    where: { name: "Hanoi Paradise Hotel" },
+    include: { rooms: true },
+  });
+  const danangHotel = await prisma.hotel.findFirst({
+    where: { name: "Da Nang Ocean Resort" },
+    include: { rooms: true },
+  });
+  const sapaRoom = await prisma.room.findFirst({
+    where: { hotelId: sapaHotel.id },
+  });
+
+  if (!hanoiHotel || !danangHotel || !sapaRoom) {
+    throw new Error("Không tìm thấy khách sạn hoặc phòng để tạo booking mẫu.");
+  }
+
+  const reviewsData = [
+    {
+      user: user1,
+      hotel: hanoiHotel,
+      room: hanoiHotel.rooms[0],
+      comment:
+        "Trải nghiệm tuyệt vời! Khách sạn rất đẹp, nhân viên nhiệt tình và phòng ốc sạch sẽ. Chắc chắn tôi sẽ tiếp tục sử dụng Velora cho chuyến đi tới.",
+    },
+    {
+      user: user2,
+      hotel: danangHotel,
+      room: danangHotel.rooms[0],
+      comment:
+        "View biển cực kỳ xuất sắc. Đồ ăn sáng ngon và phong phú. Cảm ơn hệ thống đặt phòng đã giúp tôi có một kỳ nghỉ dưỡng thật trọn vẹn và dễ dàng.",
+    },
+    {
+      user: user3,
+      hotel: sapaHotel,
+      room: sapaRoom,
+      comment:
+        "Không gian yên tĩnh, lãng mạn. Rất phù hợp cho các cặp đôi. Quá trình tìm kiếm phòng qua hệ thống rất nhanh chóng, giá cả lại vô cùng minh bạch.",
+    },
+  ];
+
+  for (const r of reviewsData) {
+    const booking = await prisma.booking.create({
+      data: {
+        userId: r.user.id,
+        roomId: r.room.id,
+        checkIn: new Date(),
+        checkOut: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+        guests: 2,
+        totalPrice: r.room.price * 2,
+        status: "CHECKED_OUT",
+      },
+    });
+    await prisma.review.create({
+      data: {
+        userId: r.user.id,
+        bookingId: booking.id,
+        hotelId: r.hotel.id,
+        rating: 5,
+        comment: r.comment,
+      },
+    });
+  }
+  console.log("✅ Đã tạo Dữ liệu Đánh giá mẫu!");
   console.log("--- HOÀN TẤT SEED DỮ LIỆU ---");
 }
 

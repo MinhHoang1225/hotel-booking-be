@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../common/AppError";
-import { notificationService } from "../notifications/notification.service";
 
 export interface CreateBookingInput {
   roomId: string;
@@ -95,6 +94,9 @@ export const bookingService = {
     });
 
     // --- THÊM NOTIFICATION SAU KHI TẠO BOOKING THÀNH CÔNG ---
+    const {
+      notificationService,
+    } = require("../notifications/notification.service");
     // 1. Thông báo cho User
     await notificationService.createNotification(
       userId,
@@ -214,6 +216,9 @@ export const bookingService = {
     });
 
     // Thông báo cho User khi bị hủy
+    const {
+      notificationService,
+    } = require("../notifications/notification.service");
     await notificationService.createNotification(
       updatedBooking.userId,
       "Đơn đặt phòng đã bị hủy",

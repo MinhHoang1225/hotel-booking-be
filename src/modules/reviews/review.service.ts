@@ -1,7 +1,6 @@
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../common/AppError";
 import { reviewRepository } from "./review.repository";
-import { notificationService } from "../notifications/notification.service";
 
 export async function createReview(user, payload) {
   const booking = await prisma.booking.findUnique({
@@ -30,6 +29,10 @@ export async function createReview(user, payload) {
   });
 
   // Gửi thông báo cho Chủ khách sạn
+  // Dynamically import to prevent circular dependency
+  const {
+    notificationService,
+  } = require("../notifications/notification.service");
   if (booking.room.hotel.ownerId) {
     await notificationService.createNotification(
       booking.room.hotel.ownerId,
@@ -93,6 +96,10 @@ export async function replyToReview(user, reviewId, replyText) {
   });
 
   // Thông báo cho Khách hàng (User)
+  // Dynamically import to prevent circular dependency
+  const {
+    notificationService,
+  } = require("../notifications/notification.service");
   await notificationService.createNotification(
     review.userId,
     "Phản hồi đánh giá mới",
@@ -116,5 +123,32 @@ export async function listMyHotelReviews(ownerId: string) {
       booking: { include: { room: { select: { name: true } } } },
     },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function listTopReviews() {
+  return prisma.review.findMany({
+    where: {
+      rating: { gte: 4 },
+      comment: {
+        not: null,
+        notIn: [""],
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 3,
+    include: {
+      user: {
+        select: {
+          fullName: true,
+          avatarUrl: true,
+        },
+      },
+      hotel: {
+        select: { name: true },
+      },
+    },
   });
 }
